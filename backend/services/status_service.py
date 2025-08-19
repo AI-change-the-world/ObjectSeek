@@ -1,7 +1,8 @@
-from typing import Dict
+from typing import Dict, Optional
 
 import GPUtil
 import psutil
+from common import logger
 from models import GPUInfo, MemoryInfo, SystemInfo
 
 # ================== Monitor Class ==================
@@ -22,20 +23,25 @@ class SystemMonitor:
         )
 
     @staticmethod
-    def get_gpu_usage() -> Dict[int, GPUInfo]:
-        gpus = GPUtil.getGPUs()
-        gpu_info = {}
-        for gpu in gpus:
-            gpu_info[gpu.id] = GPUInfo(
-                id=gpu.id,
-                name=gpu.name,
-                load_percent=round(gpu.load * 100, 2),
-                memory_used_gb=round(gpu.memoryUsed / 1024, 2),
-                memory_total_gb=round(gpu.memoryTotal / 1024, 2),
-                memory_percent=round(gpu.memoryUtil * 100, 2),
-                temperature_c=gpu.temperature,
-            )
-        return gpu_info
+    def get_gpu_usage() -> Optional[Dict[str, GPUInfo]] :
+        try:
+            gpus = GPUtil.getGPUs()
+            gpu_info = {}
+            for gpu in gpus:
+                __id = str(gpu.id)
+                gpu_info[__id] = GPUInfo(
+                    id=gpu.id,
+                    name=gpu.name,
+                    load_percent=round(gpu.load * 100, 2),
+                    memory_used_gb=round(gpu.memoryUsed / 1024, 2),
+                    memory_total_gb=round(gpu.memoryTotal / 1024, 2),
+                    memory_percent=round(gpu.memoryUtil * 100, 2),
+                    temperature_c=gpu.temperature,
+                )
+            return gpu_info
+        except Exception as e:
+            logger.warning(e)
+            return None
 
     @classmethod
     def get_system_info(cls) -> SystemInfo:
