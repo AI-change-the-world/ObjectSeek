@@ -1,0 +1,20 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from routers import status_router
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 允许访问的前端地址列表
+    allow_credentials=True,  # 是否允许携带 cookie
+    allow_methods=["*"],  # 允许的请求方法
+    allow_headers=["*"],  # 允许的请求头
+)
+
+app.include_router(status_router)
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True)
