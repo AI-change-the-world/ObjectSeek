@@ -1,1 +1,2 @@
-from models.machine_status import GPUInfo, MemoryInfo, SystemInfo
+from models.api.algorithm import CreateAlgorithmRequest
+from models.api.machine_status import GPUInfo, MemoryInfo, SystemInfo

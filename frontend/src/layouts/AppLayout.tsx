@@ -1,6 +1,7 @@
 import { Layout, Menu } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import defaultThumbnail from "../assets/icon.svg";
+import defaultText from "../assets/text.png"
 
 const { Header, Sider, Content } = Layout;
 
@@ -39,7 +40,11 @@ export default function AppLayout() {
                     alt="Logo"
                     style={{ height: '20px', marginRight: '8px' }} // 高度控制，右边留点空隙
                 />
-                ObjectSeek
+                <img
+                    src={defaultText}  // 图片路径，可以是本地 public 文件夹下的路径或网络图片
+                    alt="Logo"
+                    style={{ height: '20px', marginRight: '8px' }} // 高度控制，右边留点空隙
+                />
             </Header>
             <Layout>
                 <Sider width={200} style={{ background: '#fff' }}>

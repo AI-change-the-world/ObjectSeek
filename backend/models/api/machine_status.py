@@ -24,4 +24,4 @@ class GPUInfo(BaseModel):
 class SystemInfo(BaseModel):
     cpu: float
     memory: MemoryInfo
-    gpu: Optional[Dict[str, GPUInfo]] 
+    gpu: Optional[Dict[str, GPUInfo]]

@@ -12,6 +12,7 @@ logger.remove()
 def safe_tag(text: str):
     return text.replace("<", "\\<").replace(">", "\\>")
 
+
 def emoji_format(record):
     level = record["level"].name
     emoji_map = {

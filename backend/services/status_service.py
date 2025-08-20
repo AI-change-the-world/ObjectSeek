@@ -2,6 +2,7 @@ from typing import Dict, Optional
 
 import GPUtil
 import psutil
+
 from common import logger
 from models import GPUInfo, MemoryInfo, SystemInfo
 
@@ -23,7 +24,7 @@ class SystemMonitor:
         )
 
     @staticmethod
-    def get_gpu_usage() -> Optional[Dict[str, GPUInfo]] :
+    def get_gpu_usage() -> Optional[Dict[str, GPUInfo]]:
         try:
             gpus = GPUtil.getGPUs()
             gpu_info = {}

@@ -1,5 +1,6 @@
 from fastapi import APIRouter
-from common.resp import ApiResponse
+
+from common import ApiResponse
 from services import SystemMonitor
 
 router = APIRouter(
@@ -10,4 +11,4 @@ router = APIRouter(
 
 @router.get("/system/info", response_model=ApiResponse)
 def system_info():
-    return ApiResponse(data=SystemMonitor.get_system_info()) 
+    return ApiResponse(data=SystemMonitor.get_system_info())
