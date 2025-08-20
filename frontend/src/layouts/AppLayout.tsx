@@ -2,6 +2,7 @@ import { Layout, Menu } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import defaultThumbnail from "../assets/icon.svg";
 import defaultText from "../assets/text.png"
+import { AppstoreOutlined, ClusterOutlined, DashboardOutlined, MonitorOutlined, PythonOutlined } from '@ant-design/icons';
 
 const { Header, Sider, Content } = Layout;
 
@@ -54,11 +55,11 @@ export default function AppLayout() {
                         selectedKeys={[getSelectedKey()]}
                         style={{ height: '100%' }}
                         items={[
-                            { key: 'dashboard', label: '仪表盘', onClick: () => navigate('/dashboard') },
-                            { key: 'monitor', label: '系统监控', onClick: () => navigate('/monitor') },
-                            { key: 'scenario', label: '场景管理', onClick: () => navigate('/scenario-management') },
-                            { key: 'algorithm', label: '算法管理', onClick: () => navigate('/algorithm-management') },
-                            { key: 'stream', label: '流管理', onClick: () => navigate('/stream-management') },
+                            { key: 'dashboard', label: '仪表盘', onClick: () => navigate('/dashboard'), icon: <DashboardOutlined /> },
+                            { key: 'monitor', label: '系统监控', onClick: () => navigate('/monitor'), icon: <MonitorOutlined /> },
+                            { key: 'scenario', label: '场景管理', onClick: () => navigate('/scenario-management'), icon: <AppstoreOutlined /> },
+                            { key: 'algorithm', label: '算法管理', onClick: () => navigate('/algorithm-management'), icon: <PythonOutlined /> },
+                            { key: 'stream', label: '流管理', onClick: () => navigate('/stream-management'), icon: <ClusterOutlined /> },
                             // { key: 'user', label: '用户管理', onClick: () => navigate('/user') },
                             // { key: 'knowledge', label: '知识库管理', onClick: () => navigate('/knowledge') },
                             // { key: 'documents', label: '文档管理', onClick: () => navigate('/documents') },

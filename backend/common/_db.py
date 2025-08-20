@@ -46,6 +46,7 @@ def get_session():
 def init_db():
     # 触发创建
     from models.db.algorithm import Algorithm
+    from models.db.scenario import Scenario
     from models.db.stream import Stream
 
     logger.info(f"init db, url: {engine.url}")

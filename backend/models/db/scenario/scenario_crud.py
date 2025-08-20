@@ -2,14 +2,14 @@ from typing import List, Optional, Union
 
 from sqlalchemy.orm import Session
 
-from .algorithm import Algorithm
+from .scenario import Scenario
 
 
-class AlgorithmCrud:
+class ScenarioCrud:
     @staticmethod
-    def create(session: Session, obj: Union[Algorithm, dict]) -> Algorithm:
+    def create(session: Session, obj: Union[Scenario, dict]) -> Scenario:
         if isinstance(obj, dict):
-            obj = Algorithm(**obj)
+            obj = Scenario(**obj)
 
         session.add(obj)
         session.commit()
@@ -17,15 +17,15 @@ class AlgorithmCrud:
         return obj
 
     @staticmethod
-    def get_by_id(session: Session, id: int) -> Optional[Algorithm]:
-        return session.query(Algorithm).filter_by(id=id, is_deleted=0).first()
+    def get_by_id(session: Session, id: int) -> Optional[Scenario]:
+        return session.query(Scenario).filter_by(id=id, is_deleted=0).first()
 
     @staticmethod
-    def list(session: Session, offset: int = 0, limit: int = 100) -> List[Algorithm]:
+    def list(session: Session, offset: int = 0, limit: int = 100) -> List[Scenario]:
         return (
-            session.query(Algorithm)
+            session.query(Scenario)
             .filter_by(is_deleted=0)
-            .order_by(Algorithm.created_at.desc())
+            .order_by(Scenario.created_at.desc())
             .offset(offset)
             .limit(limit)
             .all()
@@ -33,11 +33,11 @@ class AlgorithmCrud:
 
     @staticmethod
     def count(session: Session) -> int:
-        return session.query(Algorithm).filter_by(is_deleted=0).count()
+        return session.query(Scenario).filter_by(is_deleted=0).count()
 
     @staticmethod
-    def update(session: Session, id: int, updates: dict) -> Optional[Algorithm]:
-        obj = session.query(Algorithm).filter_by(id=id, is_deleted=0).first()
+    def update(session: Session, id: int, updates: dict) -> Optional[Scenario]:
+        obj = session.query(Scenario).filter_by(id=id, is_deleted=0).first()
         if not obj:
             return None
         for key, value in updates.items():
@@ -49,7 +49,7 @@ class AlgorithmCrud:
 
     @staticmethod
     def soft_delete(session: Session, id: int) -> bool:
-        obj = session.query(Algorithm).filter_by(id=id, is_deleted=0).first()
+        obj = session.query(Scenario).filter_by(id=id, is_deleted=0).first()
         if not obj:
             return False
         obj.is_deleted = 1

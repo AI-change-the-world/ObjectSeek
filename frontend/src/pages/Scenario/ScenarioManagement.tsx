@@ -1,118 +1,160 @@
 // pages/SceneManagement.tsx
-import { useState } from "react";
-import { Table, Button, Modal, Form, Input, Space, Popconfirm, Typography } from "antd";
-
-const { Title } = Typography;
-
-// mock 数据
-interface Scene {
-    id: number;
-    name: string;
-    description: string;
-    createdAt: string;
-}
-
-const initialData: Scene[] = [
-    { id: 1, name: "施工现场", description: "用于施工监控场景", createdAt: "2025-08-10" },
-    { id: 2, name: "零售店", description: "用于客流统计场景", createdAt: "2025-08-15" },
-];
+import { useEffect, useState } from "react";
+import { Table, Button, Form, Input, Space, Popconfirm, Row, Spin, message } from "antd";
+import { getScenarioList, createScenario, updateScenario, deleteScenario, type ScenarioProps, UpdateScenarioProps, CreateScenarioProps } from "./api";
+import { PaginatedRequest } from "../../api/response";
+import ModalForm from "../../components/ModelForm";
 
 export default function Scenario() {
-    const [data, setData] = useState<Scene[]>(initialData);
+    const [data, setData] = useState<ScenarioProps[]>([]);
+    const [total, setTotal] = useState<number>(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editing, setEditing] = useState<Scene | null>(null);
+    const [editing, setEditing] = useState<ScenarioProps | null>(null);
     const [form] = Form.useForm();
+    const [loading, setLoading] = useState<boolean>(false);
+    const [page, setPage] = useState<number>(1);
+    const [pageSize, setPageSize] = useState<number>(10);
 
-    const handleOk = () => {
-        form.validateFields().then(values => {
-            if (editing) {
-                setData(prev =>
-                    prev.map(item => (item.id === editing.id ? { ...item, ...values } : item))
-                );
-            } else {
-                const newScene: Scene = {
-                    id: Date.now(),
-                    ...values,
-                    createdAt: new Date().toISOString().slice(0, 10),
-                };
-                setData(prev => [...prev, newScene]);
+    const fetchScenario = async (pageNo = page, size = pageSize) => {
+        try {
+            setLoading(true);
+            const params = new PaginatedRequest(pageNo, size);
+            const res = await getScenarioList(params);
+            if (res?.data) {
+                setData(res.data.records ?? []);
+                setTotal(res.data.total ?? 0);
             }
-            form.resetFields();
-            setEditing(null);
-            setIsModalOpen(false);
-        });
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleEdit = (record: Scene) => {
+    useEffect(() => {
+        fetchScenario(page, pageSize);
+    }, [page, pageSize]);
+
+
+    const handleEdit = (record: ScenarioProps) => {
         setEditing(record);
         form.setFieldsValue(record);
         setIsModalOpen(true);
     };
 
-    const handleDelete = (id: number) => {
-        setData(prev => prev.filter(item => item.id !== id));
+    const handleDelete = async (id: number) => {
+        try {
+            await deleteScenario(id);
+            message.success("删除成功");
+            // 重新加载列表
+            fetchScenario();
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     return (
         <div style={{ padding: "12px 24px" }}>
-            <Title level={4}>场景管理</Title>
-            <Button type="primary" style={{ marginBottom: 16 }} onClick={() => setIsModalOpen(true)}>
-                新增场景
-            </Button>
+            <div style={{ marginBottom: 16, fontWeight: 700 }}>场景管理</div>
 
-            <Table
-                rowKey="id"
-                dataSource={data}
-                columns={[
-                    { title: "名称", dataIndex: "name" },
-                    { title: "描述", dataIndex: "description" },
-                    { title: "创建时间", dataIndex: "createdAt" },
-                    {
-                        title: "操作",
-                        render: (_, record) => (
-                            <Space>
-                                <Button type="link" onClick={() => handleEdit(record)}>
-                                    编辑
-                                </Button>
-                                <Popconfirm
-                                    title="确定删除该场景吗？"
-                                    onConfirm={() => handleDelete(record.id)}
-                                >
-                                    <Button type="link" danger>
-                                        删除
+            <Row>
+                <div style={{ flex: 1 }}></div>
+                <Button
+                    type="primary"
+                    style={{ marginBottom: 16 }}
+                    onClick={() => {
+                        setEditing(null);
+                        setIsModalOpen(true);
+                        form.resetFields();
+                    }}
+                >
+                    新增场景
+                </Button>
+            </Row>
+
+            <Spin spinning={loading}>
+                <Table
+                    rowKey="id"
+                    dataSource={data}
+                    pagination={{
+                        current: page,
+                        pageSize,
+                        total,
+                        showSizeChanger: true,
+                        onChange: (p, ps) => {
+                            setPage(p);
+                            setPageSize(ps);
+                        },
+                    }}
+                    columns={[
+                        { title: "编号", dataIndex: "id" },
+                        { title: "名称", dataIndex: "name" },
+                        { title: "描述", dataIndex: "description" },
+                        {
+                            title: "创建时间",
+                            dataIndex: "created_at",
+                            render: (time) => new Date(time * 1000).toLocaleString(),
+                        },
+                        {
+                            title: "操作",
+                            render: (_, record) => (
+                                <Space>
+                                    <Button type="link" onClick={() => handleEdit(record)}>
+                                        编辑
                                     </Button>
-                                </Popconfirm>
-                            </Space>
-                        ),
-                    },
-                ]}
-            />
+                                    <Popconfirm
+                                        title="确定删除该场景吗？"
+                                        onConfirm={() => handleDelete(record.id)}
+                                    >
+                                        <Button type="link" danger>
+                                            删除
+                                        </Button>
+                                    </Popconfirm>
+                                </Space>
+                            ),
+                        },
+                    ]}
+                />
+            </Spin>
 
-            <Modal
+
+            <ModalForm<ScenarioProps>
                 title={editing ? "编辑场景" : "新增场景"}
                 open={isModalOpen}
-                onOk={handleOk}
+                initialValues={editing || {}}
+                onSubmit={async (values) => {
+                    if (editing) {
+                        // 修改场景
+                        const u = new UpdateScenarioProps(editing.id, values.name, values.description);
+                        await updateScenario(u);
+                        message.success("修改成功");
+                    } else {
+                        // 新建场景
+                        const c = new CreateScenarioProps(values.name, values.description);
+                        await createScenario(c);
+                        message.success("创建成功");
+                    }
+                    setIsModalOpen(false);
+                    setEditing(null);
+                    fetchScenario();
+                }}
                 onCancel={() => {
                     setIsModalOpen(false);
                     setEditing(null);
-                    form.resetFields();
                 }}
-            >
-                <Form form={form} layout="vertical">
-                    <Form.Item
-                        name="name"
-                        label="名称"
-                        rules={[{ required: true, message: "请输入场景名称" }]}
-                    >
-                        <Input />
-                    </Form.Item>
-                    <Form.Item name="description" label="描述">
-                        <Input.TextArea rows={3} />
-                    </Form.Item>
-                </Form>
-            </Modal>
+                formItems={
+                    <>
+                        <Form.Item
+                            name="name"
+                            label="名称"
+                            rules={[{ required: true, message: "请输入场景名称" }]}
+                        >
+                            <Input />
+                        </Form.Item>
+                        <Form.Item name="description" label="描述">
+                            <Input.TextArea rows={3} />
+                        </Form.Item>
+                    </>
+                }
+            />
         </div>
     );
 }
-
-

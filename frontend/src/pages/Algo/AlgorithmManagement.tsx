@@ -51,9 +51,11 @@ export default function AlgorithmManagement() {
             },
           }}
           columns={[
+            { title: "编号", dataIndex: "id" },
             { title: "算法名称", dataIndex: "name" },
             { title: "描述", dataIndex: "description" },
             { title: "版本", dataIndex: "version" },
+            { title: "创建时间", dataIndex: "created_at", render: (time) => new Date(time * 1000).toLocaleString() },
             {
               title: "状态",
               dataIndex: "is_deleted",
