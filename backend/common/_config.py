@@ -3,7 +3,10 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     database_url: str
-    api_key: str = "dev-key-123"
+    s3_access_key: str = "dev-key-123"
+    s3_secret_key: str = "dev-key-123"
+    s3_bucket_name: str = "dev-bucket-123"
+    s3_endpoint_url: str = "http://127.0.0.1:9000"
     env: str = "dev"
 
     class Config:

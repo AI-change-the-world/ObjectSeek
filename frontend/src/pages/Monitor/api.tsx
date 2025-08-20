@@ -33,6 +33,7 @@ const getMonitorStatus = async () => {
     } catch (error) {
         console.log(error);
         toast.error('获取监控信息失败');
+        return null;
     }
 
 }

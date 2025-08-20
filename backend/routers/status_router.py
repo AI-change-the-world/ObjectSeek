@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from common import ApiResponse
-from services import SystemMonitor
+from services.status_service import SystemMonitor
 
 router = APIRouter(
     prefix="/system-monitor",

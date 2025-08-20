@@ -32,6 +32,10 @@ class AlgorithmCrud:
         )
 
     @staticmethod
+    def count(session: Session) -> int:
+        return session.query(Algorithm).filter_by(is_deleted=0).count()
+
+    @staticmethod
     def update(session: Session, id: int, updates: dict) -> Optional[Algorithm]:
         algo = session.query(Algorithm).filter_by(id=id, is_deleted=0).first()
         if not algo:

@@ -11,6 +11,7 @@ engine = create_engine(
     max_overflow=20,
     pool_recycle=1800,
     pool_timeout=30,
+    echo=settings.env == "dev",
 )
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
@@ -45,6 +46,7 @@ def get_session():
 def init_db():
     # 触发创建
     from models.db.algorithm import Algorithm
+    from models.db.stream import Stream
 
     logger.info(f"init db, url: {engine.url}")
     create_database_if_not_exists(settings.database_url)

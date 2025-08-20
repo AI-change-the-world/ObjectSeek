@@ -1,46 +1,72 @@
 // pages/AlgorithmManagement.tsx
-import { Table, Tag, Typography } from "antd";
+import { Spin, Table, Tag } from "antd";
+import { getAlgorithmList, type AlgorithmProps } from "./api";
+import { useEffect, useState } from "react";
+import { PaginatedRequest } from "../../api/response";
 
-const { Title } = Typography;
-
-interface Algorithm {
-  id: number;
-  name: string;
-  description: string;
-  version: string;
-  status: "enabled" | "disabled";
-}
-
-const algorithms: Algorithm[] = [
-  { id: 1, name: "人员检测", description: "检测视频中出现的人物", version: "v1.0", status: "enabled" },
-  { id: 2, name: "车辆检测", description: "识别监控视频中的车辆", version: "v1.1", status: "enabled" },
-  { id: 3, name: "人脸识别", description: "识别人脸并比对数据库", version: "v0.9-beta", status: "disabled" },
-];
 
 export default function AlgorithmManagement() {
+  const [algorithms, setAlgorithms] = useState<AlgorithmProps[]>([]);
+  const [total, setTotal] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+
+  const fetchAlgorithms = async (pageNo = 1, size = 10) => {
+    try {
+      setLoading(true);
+      const params = new PaginatedRequest(pageNo, size);
+      const res = await getAlgorithmList(params);
+
+      if (res?.data) {
+        setAlgorithms(res.data.records ?? []);
+        setTotal(res.data.total ?? 0);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAlgorithms(page, pageSize);
+  }, [page, pageSize]);
+
   return (
     <div style={{ padding: "12px 24px" }}>
-      <Title level={4}>算法管理</Title>
+      {/* <Title level={4}>算法管理</Title> */}
+      <div style={{ marginBottom: 16, fontWeight: 700 }}>算法管理</div>
 
-      <Table
-        rowKey="id"
-        dataSource={algorithms}
-        columns={[
-          { title: "算法名称", dataIndex: "name" },
-          { title: "描述", dataIndex: "description" },
-          { title: "版本", dataIndex: "version" },
-          {
-            title: "状态",
-            dataIndex: "status",
-            render: (status: "enabled" | "disabled") =>
-              status === "enabled" ? (
-                <Tag color="green">启用</Tag>
-              ) : (
-                <Tag color="red">停用</Tag>
-              ),
-          },
-        ]}
-      />
+      <Spin spinning={loading}>
+        <Table
+          rowKey="id"
+          dataSource={algorithms}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            onChange: (p, ps) => {
+              setPage(p);
+              setPageSize(ps);
+            },
+          }}
+          columns={[
+            { title: "算法名称", dataIndex: "name" },
+            { title: "描述", dataIndex: "description" },
+            { title: "版本", dataIndex: "version" },
+            {
+              title: "状态",
+              dataIndex: "is_deleted",
+              render: (status: 0 | 1 | undefined) =>
+                status === 0 ? (
+                  <Tag color="green">启用</Tag>
+                ) : (
+                  <Tag color="red">停用</Tag>
+                ),
+            },
+          ]}
+        />
+      </Spin>
     </div>
   );
 }
