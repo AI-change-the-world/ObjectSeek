@@ -1,6 +1,9 @@
+from typing import Any, Dict, List, Optional
+
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from common import PaginatedRequest
 from models.api.stream import CreateStreamRequest
 from models.db.scenario.scenario import Scenario
 from models.db.stream.stream import Stream
@@ -16,10 +19,13 @@ def group(session) -> dict:
     )
 
     scenario_counts = (
-        session.query(Scenario.name.label("name"), func.count(Stream.id).label("count"))
-        .join(Scenario, Scenario.id == Stream.scenario_id)
+        session.query(
+            func.coalesce(Scenario.name, "未分类").label("name"),
+            func.count(Stream.id).label("count"),
+        )
+        .outerjoin(Scenario, Scenario.id == Stream.scenario_id)
         .filter(Stream.is_deleted == 0)
-        .group_by(Scenario.name)
+        .group_by(func.coalesce(Scenario.name, "未分类"))
         .all()
     )
 
@@ -61,3 +67,20 @@ def create_stream(req: CreateStreamRequest, session: Session) -> int:
 
 def count(session) -> int:
     return StreamCrud.count(session)
+
+
+def list_by_scenario(
+    session: Session,
+    request: PaginatedRequest,
+    scenario_id: Optional[int] = 0,
+) -> List[Dict[str, Any]]:
+    return StreamCrud.list_by_scenario(
+        session,
+        scenario_id,
+        (request.page_num - 1) * request.page_size,
+        request.page_size,
+    )
+
+
+def count_by_scenario(session, scenario_id: int) -> int:
+    return StreamCrud.count_by_scenario(session, scenario_id)

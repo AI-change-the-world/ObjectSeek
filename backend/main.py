@@ -1,8 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import (algorithm_router, dashboard_router, scenario_router,
-                     status_router, stream_router)
+from routers import (
+    algorithm_router,
+    dashboard_router,
+    scenario_router,
+    status_router,
+    stream_router,
+)
 
 app = FastAPI()
 

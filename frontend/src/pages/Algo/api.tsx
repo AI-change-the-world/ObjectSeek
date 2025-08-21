@@ -19,7 +19,7 @@ const getAlgorithmList = async (params: PaginatedRequest) => {
             data: params
         });
         const result: ApiResponse<PaginatedResponse<AlgorithmProps>> = await response.data;
-        return result;
+        return result.data;
     } catch (error) {
         console.log(error);
         toast.error('获取算法列表失败');

@@ -1,78 +1,95 @@
-// pages/VideoList.tsx
-import { useState } from "react";
-import { Row, Col, Select, Input, Empty, Button } from "antd";
-import { mockVideos } from "./mock";
-import VideoWidget from "./video";
+import React, { useEffect, useState } from "react";
+import { Card, Spin, Input, Tabs } from "antd";
+import InfiniteScroll from "react-infinite-scroll-component";
+import { fetchData, type StreamProps } from "./api";
+import TabPane from "antd/es/tabs/TabPane";
 
 
-const { Option } = Select;
-const { Search } = Input;
 
-export default function StreamManagement() {
-    const [category, setCategory] = useState<number | null>(null);
+const StreamManagement: React.FC = () => {
+    const [data, setData] = useState<StreamProps[]>([]);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [total, setTotal] = useState(0);
+    const [loading, setLoading] = useState(false);
+
+    const [activeTab, setActiveTab] = useState<number | undefined>(undefined);
     const [keyword, setKeyword] = useState("");
 
-    // 模拟分类映射
-    const categories: Record<number, string> = {
-        1: "安防监控",
-        2: "商业分析",
-        3: "其他",
+    const load = async () => {
+        if (loading) return;
+        setLoading(true);
+
+        const res = await fetchData(page, 10, activeTab ?? 0);
+
+        if (res) {
+            setData((prev) => [...prev, ...res.records]);
+            setPage((prev) => prev + 1);
+            setTotal(res.total);
+
+            setHasMore((data.length + res.records.length) < res.total);
+        }
+
+        setLoading(false);
     };
 
-    const filtered = mockVideos.filter((v) => {
-        const matchCategory = category ? v.category === category : true;
-        const matchKeyword = keyword
-            ? v.title.toLowerCase().includes(keyword.toLowerCase())
-            : true;
-        return matchCategory && matchKeyword;
-    });
+    useEffect(() => {
+        load();
+    }, [activeTab, keyword]);
+
+
 
     return (
-        <div style={{ padding: 20 }}>
-            {/* <Title level={5}>视频 / 视频流管理</Title> */}
-            <div style={{ marginBottom: 16, fontWeight: 700 }}>视频 / 视频流管理</div>
+        <div style={{ padding: "12px 24px" }}>
+            <div style={{ marginBottom: 16, fontWeight: 700 }}>流管理</div>
+            <Input.Search
+                placeholder="请输入关键字"
+                onSearch={(val) => setKeyword(val)}
+                style={{ marginBottom: 16 }}
+                allowClear
+            />
 
-            {/* 筛选区域 */}
-            <div style={{ marginBottom: 16, display: "flex", gap: 16 }}>
-                <Select
-                    placeholder="按业务场景分类"
-                    style={{ width: 200 }}
-                    allowClear
-                    onChange={(val) => setCategory(val)}
+            {/* 分类 Tabs */}
+            <Tabs
+                activeKey={activeTab ? String(activeTab) : "all"}
+                onChange={(key) => {
+                    setActiveTab(key === "all" ? undefined : Number(key));
+                }}
+            >
+                <TabPane tab="全部" key="all" />
+                <TabPane tab="场景1" key="1" />
+                <TabPane tab="场景2" key="2" />
+            </Tabs>
+
+            <div className="p-4">
+                <InfiniteScroll
+                    dataLength={data.length}
+                    next={load}
+                    hasMore={hasMore}
+                    loader={<Spin />}
+                    endMessage={<p className="text-center text-gray-500">没有更多数据了</p>}
+                // scrollableTarget={null} // 🚀 使用页面滚动，不会多出一个滚动条
                 >
-                    {Object.entries(categories).map(([id, name]) => (
-                        <Option key={id} value={Number(id)}>
-                            {name}
-                        </Option>
-                    ))}
-                </Select>
-                <Search
-                    placeholder="搜索视频标题"
-                    style={{ width: 240 }}
-                    allowClear
-                    onSearch={(val) => setKeyword(val)}
-                />
-                <div style={{ flex: 1 }} />
-
-                <Button type="primary" onClick={() => { }}>
-                    添加视频
-                </Button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {data.map((item) => (
+                            <Card
+                                key={item.id}
+                                title={item.name}
+                                className="shadow rounded-xl"
+                            >
+                                <p>类型: {item.stream_type}</p>
+                                <p>路径: {item.stream_path}</p>
+                                <p>场景: {item.scenario_name}</p>
+                                <p>创建时间: {new Date(item.created_at * 1000).toLocaleString()}</p>
+                            </Card>
+                        ))}
+                    </div>
+                </InfiniteScroll>
             </div>
-
-            {/* 视频卡片网格 */}
-            <Row gutter={[16, 16]}>
-                {filtered.length > 0 ? (
-                    filtered.map((video) => (
-                        <Col key={video.id} xs={24} sm={12} md={8} lg={6}>
-                            <VideoWidget {...video} />
-                        </Col>
-                    ))
-                ) : (
-                    <Col span={24}>
-                        <Empty description="没有找到相关视频" />
-                    </Col>
-                )}
-            </Row>
         </div>
+
+
     );
-}
+};
+
+export default StreamManagement;

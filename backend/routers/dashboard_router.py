@@ -9,8 +9,7 @@ from models.api.dashboard import Dashboard
 from models.db.algorithm.algorithm_crud import AlgorithmCrud
 from models.db.scenario.scenario_crud import ScenarioCrud
 from services import stream_service
-from services.dashboard_service import (global_data, set_word_cloud,
-                                        sync_refresh)
+from services.dashboard_service import global_data, set_word_cloud, sync_refresh
 
 # 调度器
 scheduler = BackgroundScheduler()
@@ -56,6 +55,6 @@ async def dashboard_handler(db=Depends(get_session)):
             total_algorithm=AlgorithmCrud.count(db),
             scenario_wordcloud=global_data.get("scenario", default=[]),
             algorithm_wordcloud=global_data.get("algorithm", default=[]),
-            stream_details=stream_service.group(db)
+            stream_details=stream_service.group(db),
         )
     )
