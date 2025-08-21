@@ -3,13 +3,7 @@ import { Card } from "antd";
 import { WordCloud } from '@ant-design/charts';
 import { useState } from 'react';
 
-interface DashboardData {
-    total_scenario: number;
-    scenario_wordcloud: string[];
-    total_video: number;
-    total_algorithm: number;
-    algorithm_wordcloud: string[];
-}
+
 
 interface PieDataItem {
     name: string;
@@ -26,7 +20,7 @@ interface WordCloudDataItem {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
-const Index = () => {
+const Dashboard = () => {
     const data = {
         total_scenario: 1,
         scenario_wordcloud: ["1111"],
@@ -89,10 +83,11 @@ const Index = () => {
     };
 
     return (
-        <div className="container mx-auto p-4 space-y-6">
-            <h1 className="text-3xl font-bold mb-6">数据仪表盘</h1>
+        <div style={{ padding: "12px 24px" }}>
+            {/* <h1 className="text-3xl font-bold mb-6">数据仪表盘</h1> */}
+            <div style={{ marginBottom: 16, fontWeight: 700 }}>数据仪表盘</div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <Card>
                     <div className="text-lg text-gray-500">总场景数</div>
                     <div className="text-2xl font-bold">{data.total_scenario}</div>
@@ -134,18 +129,6 @@ const Index = () => {
                     </div>
                 </Card>
 
-                <Card title="场景词云">
-                    <div style={{ height: 320 }}>
-                        <WordCloud {...scenarioConfig} />
-                    </div>
-                </Card>
-
-                <Card title="算法词云">
-                    <div style={{ height: 320 }}>
-                        <WordCloud {...algorithmConfig} />
-                    </div>
-                </Card>
-
                 <Card title="数据统计">
                     <div style={{ height: 320 }}>
                         <ResponsiveContainer width="100%" height="100%">
@@ -167,9 +150,23 @@ const Index = () => {
                         </ResponsiveContainer>
                     </div>
                 </Card>
+
+                <Card title="场景词云">
+                    <div style={{ height: 320 }}>
+                        <WordCloud {...scenarioConfig} />
+                    </div>
+                </Card>
+
+                <Card title="算法词云">
+                    <div style={{ height: 320 }}>
+                        <WordCloud {...algorithmConfig} />
+                    </div>
+                </Card>
+
+
             </div>
         </div>
     );
 };
 
-export default Index;
+export default Dashboard;
