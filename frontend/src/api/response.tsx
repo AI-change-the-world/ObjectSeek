@@ -10,13 +10,13 @@ export interface PaginatedResponse<T = any> {
 }
 
 class PaginatedRequest {
-    pageId: number;
-    pageSize: number;
+    page_num: number;
+    page_size: number;
     keyword?: string;
 
-    constructor(pageId: number = 1, pageSize: number = 10, keyword?: string) {
-        this.pageId = pageId;
-        this.pageSize = pageSize;
+    constructor(page_num: number = 1, page_size: number = 10, keyword?: string) {
+        this.page_num = page_num;
+        this.page_size = page_size;
         if (keyword) this.keyword = keyword;
     }
 }

@@ -18,9 +18,9 @@ export default function AlgorithmManagement() {
       const params = new PaginatedRequest(pageNo, size);
       const res = await getAlgorithmList(params);
 
-      if (res?.data) {
-        setAlgorithms(res.data.records ?? []);
-        setTotal(res.data.total ?? 0);
+      if (res?.records) {
+        setAlgorithms(res.records ?? []);
+        setTotal(res.total ?? 0);
       }
     } finally {
       setLoading(false);

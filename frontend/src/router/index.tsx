@@ -3,9 +3,9 @@ import AppLayout from '../layouts/AppLayout';
 import Error from '../pages/Error';
 import Dashboard from '../pages/Dashboard/Dashboard';
 import SystemMonitor from '../pages/Monitor/Monitor';
-import StreamManagement from '../pages/StreamManagement/StreamManagement';
 import Scenario from '../pages/Scenario/ScenarioManagement';
 import AlgorithmManagement from '../pages/Algo/AlgorithmManagement';
+import MyStreamPage from '../pages/StreamManagement/page';
 
 export const router = createBrowserRouter([
 
@@ -17,7 +17,7 @@ export const router = createBrowserRouter([
             { path: '/monitor', element: <SystemMonitor /> },
             { path: '/scenario-management', element: <Scenario /> },
             { path: '/algorithm-management', element: <AlgorithmManagement /> },
-            { path: '/stream-management', element: <StreamManagement /> },
+            { path: '/stream-management', element: <MyStreamPage /> },
         ],
     },
     { path: '*', element: <Error /> },
