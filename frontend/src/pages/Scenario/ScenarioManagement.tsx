@@ -1,9 +1,10 @@
 // pages/SceneManagement.tsx
 import { useEffect, useState } from "react";
-import { Table, Button, Form, Input, Space, Popconfirm, Row, Spin, message } from "antd";
+import { Table, Button, Form, Input, Space, Popconfirm, Row, Spin, message, Tag, Tooltip } from "antd";
 import { getScenarioList, createScenario, updateScenario, deleteScenario, type ScenarioProps, UpdateScenarioProps, CreateScenarioProps } from "./api";
 import { PaginatedRequest } from "../../api/response";
 import ModalForm from "../../components/ModelForm";
+import FeatureChips from "../../components/Chips";
 
 export default function Scenario() {
     const [data, setData] = useState<ScenarioProps[]>([]);
@@ -89,6 +90,29 @@ export default function Scenario() {
                         { title: "名称", dataIndex: "name" },
                         { title: "描述", dataIndex: "description" },
                         {
+                            title: "特征",
+                            dataIndex: "keypoints",
+                            render: (keypoints: string) => {
+                                if (!keypoints || keypoints.length === 0) return "-";
+                                const keypointsArray = keypoints.split(";");
+                                const display = keypointsArray.slice(0, 3);
+                                const hidden = keypointsArray.length > 3 ? keypointsArray.slice(3) : [];
+
+                                return (
+                                    <>
+                                        {display.map((item, index) => (
+                                            <Tag key={index}>{item}</Tag>
+                                        ))}
+                                        {hidden.length > 0 && (
+                                            <Tooltip title={hidden.join(", ")}>
+                                                <Tag>+{hidden.length} 更多</Tag>
+                                            </Tooltip>
+                                        )}
+                                    </>
+                                );
+                            },
+                        },
+                        {
                             title: "创建时间",
                             dataIndex: "created_at",
                             render: (time) => new Date(time * 1000).toLocaleString(),
@@ -123,12 +147,12 @@ export default function Scenario() {
                 onSubmit={async (values) => {
                     if (editing) {
                         // 修改场景
-                        const u = new UpdateScenarioProps(editing.id, values.name, values.description);
+                        const u = new UpdateScenarioProps(editing.id, values.name, values.description, values.keypoints);
                         await updateScenario(u);
                         message.success("修改成功");
                     } else {
                         // 新建场景
-                        const c = new CreateScenarioProps(values.name, values.description);
+                        const c = new CreateScenarioProps(values.name, values.description, values.keypoints);
                         await createScenario(c);
                         message.success("创建成功");
                     }
@@ -151,6 +175,9 @@ export default function Scenario() {
                         </Form.Item>
                         <Form.Item name="description" label="描述">
                             <Input.TextArea rows={3} />
+                        </Form.Item>
+                        <Form.Item name="keypoints" label="特征">
+                            <FeatureChips />
                         </Form.Item>
                     </>
                 }

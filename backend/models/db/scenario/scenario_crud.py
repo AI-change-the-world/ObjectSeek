@@ -32,6 +32,10 @@ class ScenarioCrud:
         )
 
     @staticmethod
+    def fetch_all(session: Session) -> List[Scenario]:
+        return session.query(Scenario).filter_by(is_deleted=0).all()
+
+    @staticmethod
     def count(session: Session) -> int:
         return session.query(Scenario).filter_by(is_deleted=0).count()
 

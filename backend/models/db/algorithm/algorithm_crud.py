@@ -17,6 +17,10 @@ class AlgorithmCrud:
         return obj
 
     @staticmethod
+    def fetch_all(session: Session) -> List[Algorithm]:
+        return session.query(Algorithm).filter_by(is_deleted=0).all()
+
+    @staticmethod
     def get_by_id(session: Session, id: int) -> Optional[Algorithm]:
         return session.query(Algorithm).filter_by(id=id, is_deleted=0).first()
 

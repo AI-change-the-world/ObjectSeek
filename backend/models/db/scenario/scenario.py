@@ -22,6 +22,8 @@ class Scenario(Base, ToDictMixin):
         comment="更新时间(秒级时间戳)",
     )
     is_deleted = Column(SmallInteger, default=0, comment="逻辑删除标记")
+    keypoints = Column(String(1024), nullable=True, comment="关键要素")
+    prompt = Column(String(2048), nullable=True, comment="场景提示")
 
 
 @event.listens_for(Scenario, "before_update", propagate=True)

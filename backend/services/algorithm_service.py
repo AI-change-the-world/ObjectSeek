@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from common import logger
+from common import jieba_cut, logger
 from models import CreateAlgorithmRequest
 from models.db.algorithm import AlgorithmCrud
 
@@ -28,3 +28,9 @@ def get_by_page(session, page_size: int = 10, page_num: int = 1) -> list[dict]:
 
 def count(session) -> int:
     return AlgorithmCrud.count(session=session)
+
+
+async def get_wordcloud(session) -> list[str]:
+    objs = AlgorithmCrud.fetch_all(session)
+    strs = ";".join([x.description for x in objs if x.description])
+    return jieba_cut(strs)

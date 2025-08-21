@@ -1,8 +1,14 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from common import (ApiPageResponse, ApiResponse, ListResponse,
-                    PaginatedRequest, get_session, logger)
+from common import (
+    ApiPageResponse,
+    ApiResponse,
+    ListResponse,
+    PaginatedRequest,
+    get_session,
+    logger,
+)
 from models import CreateAlgorithmRequest
 from services.algorithm_service import count, create_algorithm, get_by_page
 

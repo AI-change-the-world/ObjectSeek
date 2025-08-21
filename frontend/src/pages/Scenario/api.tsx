@@ -9,15 +9,18 @@ interface ScenarioProps {
     is_deleted: number;
     name: string;
     description: string | null;
+    keypoints: string | null;
 }
 
 class CreateScenarioProps {
     name: string;
     description: string | null;
+    keypoints: string | null;
 
-    constructor(name: string, description: string | null) {
+    constructor(name: string, description: string | null, keypoints: string | null) {
         this.name = name;
         this.description = description;
+        this.keypoints = keypoints;
     }
 }
 
@@ -25,9 +28,11 @@ class UpdateScenarioProps {
     name: string;
     description: string | null;
     id: number;
+    keypoints: string | null;
 
-    constructor(id: number, name: string, description: string | null) {
+    constructor(id: number, name: string, description: string | null, keypoints: string | null) {
         this.id = id;
+        this.keypoints = keypoints;
         this.name = name;
         this.description = description;
     }

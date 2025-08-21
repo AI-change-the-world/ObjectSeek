@@ -43,6 +43,12 @@ def get_session():
         session.close()
 
 
+def get_sync_session():
+    if SessionLocal is None:
+        raise Exception("DB not initialized")
+    return SessionLocal()
+
+
 def init_db():
     # 触发创建
     from models.db.algorithm import Algorithm
