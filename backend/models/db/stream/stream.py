@@ -23,8 +23,9 @@ class Stream(Base, ToDictMixin):
     is_deleted = Column(SmallInteger, default=0, comment="逻辑删除标记")
 
     algo_id = Column("algorithm_id", Integer, nullable=True)
-    name = Column("algorithm_name", String(20), nullable=False)
+    name = Column("name", String(20), nullable=False)
     description = Column("description", String(1024), nullable=True)
+    scenario_id = Column("scenario_id", Integer, nullable=True)
 
     stream_type = Column(
         "stream_type",

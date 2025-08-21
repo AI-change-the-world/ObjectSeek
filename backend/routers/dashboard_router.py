@@ -8,7 +8,9 @@ from common import ApiResponse, get_session, get_sync_session, logger
 from models.api.dashboard import Dashboard
 from models.db.algorithm.algorithm_crud import AlgorithmCrud
 from models.db.scenario.scenario_crud import ScenarioCrud
-from services.dashboard_service import global_data, set_word_cloud, sync_refresh
+from services import stream_service
+from services.dashboard_service import (global_data, set_word_cloud,
+                                        sync_refresh)
 
 # 调度器
 scheduler = BackgroundScheduler()
@@ -49,11 +51,11 @@ router = APIRouter(
 async def dashboard_handler(db=Depends(get_session)):
     return ApiResponse(
         data=Dashboard(
-            # TODO
-            total_video=0,
+            total_video=stream_service.count(db),
             total_scenario=ScenarioCrud.count(db),
             total_algorithm=AlgorithmCrud.count(db),
             scenario_wordcloud=global_data.get("scenario", default=[]),
             algorithm_wordcloud=global_data.get("algorithm", default=[]),
+            stream_details=stream_service.group(db)
         )
     )

@@ -1,2 +1,24 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+
+from common import ApiResponse, get_session
+from models.api.stream import CreateStreamRequest
+from services import stream_service
+
+router = APIRouter(
+    prefix="/stream",
+    tags=["stream"],
+)
+
+
+@router.get("/group", response_model=ApiResponse)
+async def group(session: Session = Depends(get_session)):
+    return ApiResponse(data=stream_service.group(session))
+
+
+@router.post("/create", response_model=ApiResponse)
+async def create_stream_handler(
+    request: CreateStreamRequest, session: Session = Depends(get_session)
+) -> ApiResponse:
+    """创建场景"""
+    return ApiResponse(data=stream_service.create_stream(request, session))
