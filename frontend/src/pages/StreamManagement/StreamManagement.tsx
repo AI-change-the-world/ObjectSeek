@@ -1,8 +1,26 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Card, Spin, Input, Tabs } from "antd";
+import { Spin, Tabs, Button, Row, Form, Modal, Input, Upload } from "antd";
 import InfiniteScroll from "react-infinite-scroll-component";
-import { fetchData, type StreamProps } from "./api";
+import { fetchCatalog, fetchData, type CatalogProps, type StreamProps } from "./api";
 import TabPane from "antd/es/tabs/TabPane";
+import VideoWidget from "./video";
+import { UploadOutlined } from "@ant-design/icons";
+import { toast } from "react-toastify";
+
+
+const StreamPathInput: React.FC<{
+    value: string;
+    onChange: (v: string) => void;
+}> = React.memo(({ value, onChange }) => {
+    return (
+        <Input
+            value={value}
+            placeholder="请输入 RTSP 地址或上传视频文件"
+            style={{ flex: 1 }}
+            onChange={(e) => onChange(e.target.value)}
+        />
+    );
+});
 
 const StreamManagement: React.FC = () => {
     // --- STATE MANAGEMENT ---
@@ -11,15 +29,54 @@ const StreamManagement: React.FC = () => {
     const [hasMore, setHasMore] = useState(true);
     const [_, setTotal] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [tabs, setTabs] = useState<CatalogProps[]>([]);
 
     // State for filters
-    const [activeTab, setActiveTab] = useState<number | undefined>(undefined);
-    const [keyword, setKeyword] = useState("");
+    const [activeTab, setActiveTab] = useState<number>(0);
+    // const [keyword, setKeyword] = useState("");
+    const [modalOpen, setModalOpen] = useState(false);
+
+    const [uploading, setUploading] = useState(false);
+
+    const [pathVal, setPathVal] = useState("");
 
     // --- DATA FETCHING LOGIC ---
 
+
+    const handleBeforeUpload = async (file: File) => {
+        try {
+            setUploading(true);
+
+            setTimeout(() => {
+                setPathVal(file.name);
+                console.log("设置 stream_path 为:", file.name);
+            }, 0);
+
+            toast.success("上传成功");
+        } catch (err) {
+            toast.error((err as Error).message || "上传失败");
+        } finally {
+            setUploading(false);
+        }
+
+        return false; // 阻止 antd 自动上传
+    };
+
+    useEffect(() => {
+        const init = async () => {
+            const res = await fetchCatalog();
+            if (!res) return;
+            setTabs(res);
+            // 默认选第一个 tab
+            if (res.length > 0) {
+                setActiveTab(res[0].scenario_id);
+            }
+        };
+        init();
+    }, []); // 注意：空依赖数组 -> 只在挂载时执行
+
     // useCallback is used to memoize the function, preventing unnecessary re-creation.
-    const loadData = useCallback(async (currentPage: number, _: string, currentTab?: number) => {
+    const loadData = useCallback(async (currentPage: number, currentTab?: number) => {
         if (loading) return;
         setLoading(true);
 
@@ -47,14 +104,14 @@ const StreamManagement: React.FC = () => {
         setPage(1);
         setData([]); // Clear data immediately for better UX
         setHasMore(true); // Assume new filter has data
-        loadData(1, keyword, activeTab);
-    }, [activeTab, keyword]);
+        loadData(1, activeTab);
+    }, [activeTab]);
 
     // Effect for loading more data when page number changes (due to infinite scroll)
     useEffect(() => {
         // We only fetch if the page is > 1. Page 1 is handled by the filter effect.
         if (page > 1) {
-            loadData(page, keyword, activeTab);
+            loadData(page, activeTab);
         }
     }, [page]);
 
@@ -69,35 +126,48 @@ const StreamManagement: React.FC = () => {
         }
     };
 
-    const handleSearch = (value: string) => {
-        // Set keyword. The useEffect for filters will handle the rest.
-        setKeyword(value);
-    };
+
 
     const handleTabChange = (key: string) => {
         // Set active tab. The useEffect for filters will handle the rest.
-        setActiveTab(key === "all" ? undefined : Number(key));
+        setActiveTab(Number(key));
     };
+
 
 
     return (
         // **FIXED**: Add an ID to the main scrollable container.
         <div id="scrollableDiv" style={{ padding: "12px 24px", height: "calc(100vh - 50px)", overflow: "auto" }}>
             <div style={{ marginBottom: 16, fontWeight: 700 }}>流管理</div>
-            <Input.Search
+            {/* <Input.Search
                 placeholder="请输入关键字"
                 onSearch={handleSearch}
                 style={{ marginBottom: 16 }}
                 allowClear
-            />
+            /> */}
+            <Row>
+                <div style={{ flex: 1 }}></div>
+                <Button
+                    type="primary"
+                    style={{ marginBottom: 16 }}
+                    onClick={() => {
+                        setModalOpen(true);
+                    }}
+                >
+                    新增视频
+                </Button>
+            </Row>
 
             <Tabs
-                activeKey={activeTab ? String(activeTab) : "all"}
+                activeKey={String(activeTab)}
                 onChange={handleTabChange}
             >
-                <TabPane tab="全部" key="all" />
+                {/* <TabPane tab="全部" key="all" />
                 <TabPane tab="场景1" key="1" />
-                <TabPane tab="场景2" key="2" />
+                <TabPane tab="场景2" key="2" /> */}
+                {tabs.map((tab) => (
+                    <TabPane tab={tab.scenario_name} key={String(tab.scenario_id)} />
+                ))}
             </Tabs>
 
             <div className="p-4">
@@ -112,21 +182,63 @@ const StreamManagement: React.FC = () => {
                 >
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {data.map((item) => (
-                            <Card
-                                key={item.id}
-                                title={item.name}
-                                className="shadow rounded-xl"
-                            >
-                                <p>类型: {item.stream_type}</p>
-                                <p>路径: {item.stream_path}</p>
-                                <p>场景: {item.scenario_name}</p>
-                                <p>创建时间: {new Date(item.created_at * 1000).toLocaleString()}</p>
-                            </Card>
+
+                            VideoWidget(item)
                         ))}
                     </div>
                 </InfiniteScroll>
             </div>
-        </div>
+
+            <Modal
+                title={"新增视频"}
+                open={modalOpen}
+                onOk={() => { }}
+                onCancel={() => {
+                    setModalOpen(false);
+                }}
+                confirmLoading={loading}
+                maskClosable={!loading}
+                closable={!loading}
+
+            >
+
+                <Form.Item
+                    name="name"
+                    label="流名称"
+                    rules={[{ required: true, message: "请输入流名称" }]}
+                >
+                    <Input />
+                </Form.Item>
+
+                <Form.Item
+                    name="stream_path"
+                    label="流地址"
+                    rules={[{ required: true, message: "请上传或者输入流地址" }]}
+                >
+                    <Row gutter={8} style={{ display: "flex", marginRight: 1.5 }}>
+                        <StreamPathInput value={pathVal} onChange={(e) => setPathVal(e)} />
+
+                        {/* 上传按钮 */}
+                        <Upload
+                            style={{ marginLeft: 8 }}
+                            accept="video/*"
+                            showUploadList={false}
+                            beforeUpload={handleBeforeUpload}
+                        >
+                            <Button icon={<UploadOutlined />} loading={uploading} disabled={uploading}>
+                                上传视频
+                            </Button>
+                        </Upload>
+                    </Row>
+                </Form.Item>
+
+                <Form.Item name="description" label="描述">
+                    <Input.TextArea rows={3} />
+                </Form.Item>
+
+
+            </Modal>
+        </div >
     );
 };
 

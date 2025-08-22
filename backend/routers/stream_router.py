@@ -1,7 +1,13 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from common import ApiResponse, PaginatedRequest, get_session, ApiPageResponse, ListResponse
+from common import (
+    ApiPageResponse,
+    ApiResponse,
+    ListResponse,
+    PaginatedRequest,
+    get_session,
+)
 from models.api.stream import CreateStreamRequest
 from services import stream_service
 
@@ -31,5 +37,14 @@ async def list_by_scenario_handler(
     """获取场景下的数据流列表"""
     count = stream_service.count_by_scenario(session, type_id)
     return ApiPageResponse(
-        data=ListResponse(total=count, records=stream_service.list_by_scenario(session, request, type_id))
+        data=ListResponse(
+            total=count,
+            records=stream_service.list_by_scenario(session, request, type_id),
+        )
     )
+
+
+@router.get("/catalog", response_model=ApiResponse)
+async def catalog(session: Session = Depends(get_session)) -> ApiResponse:
+    """获取数据流目录"""
+    return ApiResponse(data=stream_service.catalog(session))

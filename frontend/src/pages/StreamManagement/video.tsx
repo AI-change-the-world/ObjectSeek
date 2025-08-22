@@ -1,13 +1,15 @@
-import type { VideoProps } from "./api";
-import { Card, Button, Tag, Tooltip } from "antd";
+import type { StreamProps } from "./api";
+import { Card, Button, Tag, Tooltip, Row } from "antd";
 import {
+    DeleteOutlined,
+    EditOutlined,
     PlayCircleOutlined,
     VideoCameraOutlined,
 } from "@ant-design/icons";
-import defaultThumbnail from "../../assets/react.svg";
+import defaultThumbnail from "../../assets/text.png";
 const { Meta } = Card;
 
-const VideoWidget = (video: VideoProps) => {
+const VideoWidget = (video: StreamProps, onDelete?: () => void, onEdit?: () => void) => {
     return (
         <Card
             key={video.id}
@@ -15,12 +17,12 @@ const VideoWidget = (video: VideoProps) => {
             cover={
                 <div style={{ position: "relative" }}>
                     <img
-                        src={video.thumbnail || defaultThumbnail}
-                        alt={video.title}
+                        src={defaultThumbnail}
+                        alt={video.name}
                         style={{
                             width: "100%",
                             height: 180,
-                            objectFit: "cover",
+                            objectFit: "contain",
                         }}
                     />
                     {/* hover 播放按钮 */}
@@ -46,7 +48,7 @@ const VideoWidget = (video: VideoProps) => {
                         </Tooltip>
                     </div>
                     {/* 实时流标记 */}
-                    {video.type === "stream" && (
+                    {video.stream_type === "stream" && (
                         <Tag
                             color="red"
                             style={{
@@ -76,25 +78,52 @@ const VideoWidget = (video: VideoProps) => {
         >
             <Meta
                 title={
-                    <Tooltip title={video.title}>
+                    <Tooltip title={video.description}>
                         <span style={{ fontSize: 16, fontWeight: 500 }}>
-                            {video.title}
+                            {video.name}
                         </span>
                     </Tooltip>
                 }
                 description={
+
+
                     <div>
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                color: "rgba(0,0,0,0.45)",
-                                marginBottom: 4,
-                            }}
-                        >
-                            <VideoCameraOutlined style={{ marginRight: 4 }} />
-                            {video.type === "video" ? "视频文件" : "视频流"}
-                        </div>
+                        <Row>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    color: "rgba(0,0,0,0.45)",
+                                    marginBottom: 4,
+                                }}
+                            >
+                                <VideoCameraOutlined style={{ marginRight: 4 }} />
+                                {video.stream_type === "file" ? "视频文件" : "视频流"}
+                            </div>
+                            <div
+                                style={{
+                                    flex: 1
+                                }}
+                            >
+                            </div>
+                            <Tooltip title="编辑">
+                                <Button
+                                    type="text"   // 👈 使用 "text" 或 "link" 类型，这样没有边框和背景
+                                    icon={<EditOutlined />}
+                                    onClick={onEdit}
+                                />
+                            </Tooltip>
+
+                            <Tooltip title="删除">
+                                <Button
+                                    type="text"
+                                    danger        // 👈 删除一般加个红色
+                                    icon={<DeleteOutlined />}
+                                    onClick={onDelete}
+                                />
+                            </Tooltip>
+                        </Row>
+
                     </div>
                 }
             />

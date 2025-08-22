@@ -111,10 +111,12 @@ class StreamCrud:
         ]
 
     @staticmethod
-    def count_by_scenario(session, scenario_id:int) -> int:
+    def count_by_scenario(session, scenario_id: int) -> int:
         if scenario_id == 0:
             return StreamCrud.count(session)
         elif scenario_id == -1:
             return session.query(Stream).filter(Stream.scenario_id.is_(None)).count()
         else:
-            return session.query(Stream).filter(Stream.scenario_id == scenario_id).count()
+            return (
+                session.query(Stream).filter(Stream.scenario_id == scenario_id).count()
+            )

@@ -10,7 +10,7 @@ from models.db.stream.stream import Stream
 from models.db.stream.stream_crud import StreamCrud
 
 
-def group(session) -> dict:
+def group(session: Session) -> dict:
     stream_type_counts = (
         session.query(Stream.stream_type, func.count(Stream.id).label("count"))
         .filter(Stream.is_deleted == 0)  # 忽略逻辑删除
@@ -84,3 +84,39 @@ def list_by_scenario(
 
 def count_by_scenario(session, scenario_id: int) -> int:
     return StreamCrud.count_by_scenario(session, scenario_id)
+
+
+def catalog(session: Session) -> List[Dict[str, Any]]:
+    scenario_counts = (
+        session.query(
+            Stream.scenario_id.label("scenario_id"),
+            func.coalesce(Scenario.name, "未分类").label("name"),
+            func.count(Stream.id).label("count"),
+        )
+        .outerjoin(Scenario, Scenario.id == Stream.scenario_id)
+        .filter(Stream.is_deleted == 0)
+        .group_by(func.coalesce(Scenario.name, "未分类"))
+        .all()
+    )
+
+    res = [
+        {
+            "scenario_id": scenario.scenario_id if scenario.scenario_id else -1,
+            "scenario_name": scenario.name,
+            "scenario_count": scenario.count,
+        }
+        for scenario in scenario_counts
+    ]
+
+    res.sort(key=lambda x: x["scenario_id"])
+
+    res.insert(
+        0,
+        {
+            "scenario_id": 0,
+            "scenario_name": "全部",
+            "scenario_count": sum([scenario.count for scenario in scenario_counts]),
+        }
+    )
+
+    return res

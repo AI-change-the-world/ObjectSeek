@@ -2,14 +2,6 @@ import { toast } from "react-toastify";
 import apiClient from "../../api/client";
 import { PaginatedRequest, type ApiResponse, type PaginatedResponse } from "../../api/response";
 
-interface VideoProps {
-    id: number;
-    title: string;
-    type: string;
-    category: number;
-    url: string;
-    thumbnail: string | null;
-}
 
 interface StreamProps {
     id: number;
@@ -22,6 +14,47 @@ interface StreamProps {
     scenario_name: string | null;
 }
 
+interface CatalogProps {
+    scenario_id: number;
+    scenario_name: string;
+    scenario_count: number;
+}
+
+
+const fetchCatalog = async () => {
+
+    try {
+        const res = await apiClient.get("/stream/catalog");
+
+        const result: ApiResponse<CatalogProps[]> = await res.data;
+
+        return result.data;
+    } catch (err) {
+        console.error("加载数据失败", err);
+        toast.error("加载数据失败");
+        return null;
+    }
+};
+
+
+const uploadFile = async (file: File) => {
+    try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await apiClient.post("/stream/upload", formData, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        });
+
+        const result: ApiResponse<String> = await res.data;
+
+        return result.data;
+    } catch (err) {
+        toast.error("上传失败");
+    }
+};
 
 const fetchData = async (page: number, size: number, type_id: number) => {
     try {
@@ -37,6 +70,6 @@ const fetchData = async (page: number, size: number, type_id: number) => {
     }
 };
 
-export type { VideoProps, StreamProps }
+export type { StreamProps, CatalogProps }
 
-export { fetchData };
+export { fetchData, fetchCatalog, uploadFile };
