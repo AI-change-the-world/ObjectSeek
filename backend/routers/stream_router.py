@@ -56,7 +56,7 @@ async def analyze(id: int, session: Session = Depends(get_session)):
 
     obj = stream_service.get_by_id(session, id)
     if obj is None:
-        return " [DONE] No such stream or file"
+        return EventSourceResponse(["error: object not found", "[DONE]"])
     al = Algo_1(video_path=obj.stream_path)
     return EventSourceResponse(al.run(), media_type="text/event-stream")
 

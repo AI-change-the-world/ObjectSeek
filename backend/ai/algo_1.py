@@ -2,6 +2,7 @@
 """
 
 import asyncio
+import logging
 import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -17,7 +18,7 @@ from ultralytics.utils import LOGGER
 from ai._basic import AlgoConfig, AlgoType, BasicAlgo
 from common import logger, numpy_to_base64, save_s3_temp_file
 
-LOGGER.setLevel(logger.warning)  # 只输出 warning 以上的日志
+LOGGER.setLevel(logging.WARNING)  # 只输出 warning 以上的日志
 
 
 def bndbox_overlap(
@@ -738,3 +739,5 @@ class Algo_1(BasicAlgo):
         os.remove(self.temp_file)
 
         # TODO save data to s3 and db
+
+        yield "[DONE]"

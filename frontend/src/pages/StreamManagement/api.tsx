@@ -108,6 +108,39 @@ const fetchData = async (page: number, size: number, type_id: number) => {
     }
 };
 
+const analyzeStream = async (streamId: number, onMessage: (data: string) => void, onComplete?: () => void, onError?: (error: string) => void) => {
+    try {
+        const eventSource = new EventSource(import.meta.env.VITE_API_BASE_URL + `/stream/analyze/${streamId}`);
+
+        eventSource.onmessage = (event) => {
+            const data = event.data;
+            if (data.includes("[DONE]")) {
+                eventSource.close();
+                onComplete?.();
+            } else {
+                onMessage(data);
+            }
+        };
+
+        eventSource.onerror = (error) => {
+            if (eventSource.readyState === EventSource.CLOSED) {
+                console.warn("SSE 已关闭（可能是正常结束）");
+                eventSource.close();
+            } else {
+                console.error("SSE 出现错误:", error);
+                eventSource.close();
+                onError?.("分析过程中出现错误");
+            }
+        };
+
+        return eventSource;
+    } catch (err) {
+        console.error("启动分析失败", err);
+        onError?.("启动分析失败");
+        return null;
+    }
+};
+
 export type { StreamProps, CatalogProps, CreateStreamRequest }
 
-export { fetchData, fetchCatalog, uploadFile, createStream, fetchStreamView };
+export { fetchData, fetchCatalog, uploadFile, createStream, fetchStreamView, analyzeStream };

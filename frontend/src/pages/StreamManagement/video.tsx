@@ -8,9 +8,10 @@ import {
     VideoCameraOutlined,
     FullscreenOutlined,
     CloseOutlined,
+    ExperimentOutlined,
 } from "@ant-design/icons";
 import defaultThumbnail from "../../assets/text.png";
-import { fetchStreamView } from "./api";
+import { fetchStreamView, analyzeStream } from "./api";
 import { toast } from "react-toastify";
 
 const { Meta } = Card;
@@ -24,6 +25,9 @@ const VideoWidget: React.FC<{
     const [loading, setLoading] = useState(false);
     const [streamUrl, setStreamUrl] = useState<string>("");
     const [videoError, setVideoError] = useState<string>("");
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [analysisResults, setAnalysisResults] = useState<string[]>([]);
+    const [currentAnalysis, setCurrentAnalysis] = useState<EventSource | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
 
 
@@ -101,6 +105,57 @@ const VideoWidget: React.FC<{
             if (videoRef.current.requestFullscreen) {
                 videoRef.current.requestFullscreen();
             }
+        }
+    };
+
+    // 开始分析
+    const handleStartAnalysis = async () => {
+        if (isAnalyzing) {
+            // 停止当前分析
+            if (currentAnalysis) {
+                currentAnalysis.close();
+                setCurrentAnalysis(null);
+            }
+            setIsAnalyzing(false);
+            toast.info("已停止分析");
+            return;
+        }
+
+        try {
+            setIsAnalyzing(true);
+            setAnalysisResults([]);
+            toast.info("开始分析视频...");
+
+            const eventSource = await analyzeStream(
+                video.id,
+                (data: string) => {
+                    // 收到分析数据
+                    setAnalysisResults(prev => [...prev, data]);
+                    toast.success(`分析结果: ${data}`);
+                },
+                () => {
+                    // 分析完成
+                    setIsAnalyzing(false);
+                    setCurrentAnalysis(null);
+                    toast.success("分析完成!");
+                },
+                (error: string) => {
+                    // 分析出错
+                    setIsAnalyzing(false);
+                    setCurrentAnalysis(null);
+                    toast.error(error);
+                }
+            );
+
+            if (eventSource) {
+                setCurrentAnalysis(eventSource);
+            } else {
+                setIsAnalyzing(false);
+            }
+        } catch (error) {
+            console.error('启动分析失败:', error);
+            setIsAnalyzing(false);
+            toast.error("启动分析失败");
         }
     };
 
@@ -255,13 +310,21 @@ const VideoWidget: React.FC<{
                     top: 20,
                     maxWidth: 1400,
                 }}
-                bodyStyle={{
-                    padding: 0,
-                    minHeight: '60vh',
-                    display: 'flex',
-                    flexDirection: 'column',
+                // bodyStyle={{
+                //     padding: 0,
+                //     minHeight: '60vh',
+                //     display: 'flex',
+                //     flexDirection: 'column',
+                // }}
+                styles={{
+                    body: {
+                        padding: 0,
+                        minHeight: '60vh',
+                        display: 'flex',
+                        flexDirection: 'column',
+                    }
                 }}
-                destroyOnClose
+                destroyOnHidden
                 maskClosable={false}
                 closable={false}
             >
@@ -428,11 +491,44 @@ const VideoWidget: React.FC<{
                             </div>
                         </div>
 
-                        {/* 右侧功能区 - 为后续识别、检索功能预留 */}
+                        {/* 右侧功能区 - 智能分析 */}
                         <div style={{ width: '300px', padding: '0 16px', borderLeft: '1px solid #e8e8e8' }}>
-                            <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 600 }}>智能分析</h4>
-                            <div style={{ fontSize: '12px', color: '#999' }}>
-                                识别和检索功能将在后续版本中支持...
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>智能分析</h4>
+                                <Button
+                                    type={isAnalyzing ? "default" : "primary"}
+                                    size="small"
+                                    icon={<ExperimentOutlined />}
+                                    loading={isAnalyzing}
+                                    onClick={handleStartAnalysis}
+                                >
+                                    {isAnalyzing ? '停止分析' : '开始检测'}
+                                </Button>
+                            </div>
+
+                            {/* 分析结果显示区域 */}
+                            <div style={{
+                                fontSize: '12px',
+                                color: analysisResults.length > 0 ? '#333' : '#999',
+                                maxHeight: '80px',
+                                overflowY: 'auto',
+                                border: analysisResults.length > 0 ? '1px solid #d9d9d9' : 'none',
+                                borderRadius: '4px',
+                                padding: analysisResults.length > 0 ? '8px' : '0',
+                                background: analysisResults.length > 0 ? '#fafafa' : 'transparent'
+                            }}>
+                                {analysisResults.length > 0 ? (
+                                    <div>
+                                        <div style={{ fontWeight: 600, marginBottom: '4px' }}>分析步骤:</div>
+                                        {analysisResults.map((result, index) => (
+                                            <div key={index} style={{ marginBottom: '2px', lineHeight: '16px' }}>
+                                                • {result}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    isAnalyzing ? '正在分析中...' : '点击检测按钮开始智能分析'
+                                )}
                             </div>
                         </div>
                     </div>
