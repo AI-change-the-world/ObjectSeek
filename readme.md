@@ -35,6 +35,4 @@
 
 ### 有趣的事情：用豆包让图像动起来...
 
-<video src="./resources/video.mp4" controls width="600" loop>
-  你的浏览器不支持 video 标签。
-</video>
+![video](./resources/video.gif)
