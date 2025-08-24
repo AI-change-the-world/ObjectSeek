@@ -2,6 +2,8 @@
 
 我打算做一个 **AI 数据中台**，配合 [auto_ml](https://github.com/AI-change-the-world/auto_ml)，把 **AI 的全生命周期** 串起来：从数据采集、处理，到模型训练、上线，再到后续的优化迭代，都能在一个平台里搞定。
 
+![image](./resources/introduction.png)
+
 ### 想做的事
 - 搞一个统一的数据和模型管理平台  
 - 让数据采集、处理、建模、部署一条龙  
@@ -28,3 +30,11 @@
 
 * python
 * react（我喜欢用flutter，但是flutter接入一些视频流好像不太成熟，就开始自学react了）
+
+
+
+### 有趣的事情：用豆包让图像动起来...
+
+<video src="./resources/video.mp4" controls width="600" loop>
+  你的浏览器不支持 video 标签。
+</video>
