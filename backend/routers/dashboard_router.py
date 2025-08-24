@@ -9,7 +9,8 @@ from models.api.dashboard import Dashboard
 from models.db.algorithm.algorithm_crud import AlgorithmCrud
 from models.db.scenario.scenario_crud import ScenarioCrud
 from services import stream_service
-from services.dashboard_service import global_data, set_word_cloud, sync_refresh
+from services.dashboard_service import (global_data, set_word_cloud,
+                                        sync_refresh)
 
 # 调度器
 scheduler = BackgroundScheduler()

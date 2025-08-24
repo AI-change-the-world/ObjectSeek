@@ -198,3 +198,5 @@ grounding-dino-base/
 *.pkl
 
 .env
+
+*.onnx

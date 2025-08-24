@@ -1,22 +1,11 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from common import (
-    ApiPageResponse,
-    ApiResponse,
-    ListResponse,
-    PaginatedRequest,
-    get_session,
-    logger,
-)
+from common import (ApiPageResponse, ApiResponse, ListResponse,
+                    PaginatedRequest, get_session, logger)
 from models.api.scenario import CreateScenarioRequest, UpdateScenarioRequest
-from services.scenario_service import (
-    count,
-    create_scenario,
-    delete,
-    get_by_page,
-    update,
-)
+from services.scenario_service import (count, create_scenario, delete,
+                                       get_by_page, update)
 
 router = APIRouter(
     prefix="/scenario",

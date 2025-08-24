@@ -120,7 +120,7 @@ def catalog(session: Session) -> List[Dict[str, Any]]:
             "scenario_id": 0,
             "scenario_name": "全部",
             "scenario_count": sum([scenario.count for scenario in scenario_counts]),
-        }
+        },
     )
 
     return res

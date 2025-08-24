@@ -1,14 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import (
-    algorithm_router,
-    dashboard_router,
-    scenario_router,
-    status_router,
-    stream_router,
-)
 from common._background_tasks import start_cache_cleanup
+from routers import (algorithm_router, dashboard_router, scenario_router,
+                     status_router, stream_router)
 
 app = FastAPI()
 
