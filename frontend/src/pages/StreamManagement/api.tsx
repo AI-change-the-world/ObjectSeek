@@ -20,6 +20,15 @@ interface CatalogProps {
     scenario_count: number;
 }
 
+interface CreateStreamRequest {
+    name: string;
+    description?: string;
+    algo_id?: number;
+    scenario_id?: number;
+    stream_type: string;
+    stream_path: string;
+}
+
 
 const fetchCatalog = async () => {
 
@@ -37,6 +46,7 @@ const fetchCatalog = async () => {
 };
 
 
+
 const uploadFile = async (file: File) => {
     try {
         const formData = new FormData();
@@ -48,11 +58,39 @@ const uploadFile = async (file: File) => {
             },
         });
 
-        const result: ApiResponse<String> = await res.data;
+        const result: ApiResponse<string> = await res.data;
 
         return result.data;
     } catch (err) {
         toast.error("上传失败");
+    }
+};
+
+const createStream = async (data: CreateStreamRequest) => {
+    try {
+        const res = await apiClient.post("/stream/create", data);
+
+        const result: ApiResponse<StreamProps> = await res.data;
+
+        return result.data;
+    } catch (err) {
+        console.error("创建流失败", err);
+        toast.error("创建流失败");
+        return null;
+    }
+};
+
+const fetchStreamView = async (streamId: number) => {
+    try {
+        const res = await apiClient.get(`/stream/view/${streamId}`);
+
+        const result: ApiResponse<string> = await res.data;
+
+        return result.data;
+    } catch (err) {
+        console.error("获取视频流失败", err);
+        toast.error("获取视频流失败");
+        return null;
     }
 };
 
@@ -70,6 +108,6 @@ const fetchData = async (page: number, size: number, type_id: number) => {
     }
 };
 
-export type { StreamProps, CatalogProps }
+export type { StreamProps, CatalogProps, CreateStreamRequest }
 
-export { fetchData, fetchCatalog, uploadFile };
+export { fetchData, fetchCatalog, uploadFile, createStream, fetchStreamView };

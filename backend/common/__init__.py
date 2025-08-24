@@ -9,6 +9,7 @@ from common._openai import chat_client, chat_model, chat_vlm_model
 from common._opendal import s3_operator
 from common._req import PaginatedRequest
 from common._resp import ApiPageResponse, ApiResponse, ListResponse
+from common._cache import presign_url_cache
 
 init_db()
 
@@ -33,11 +34,48 @@ def upload_to_s3(local_path: str, s3_path: str):
 
 
 async def presign_url(s3_path: str) -> str:
-    return (
-        await s3_operator.to_async_operator().presign_stat(s3_path, expire_second=3600)
+    """
+    获取预签名URL，带缓存机制
+    
+    Args:
+        s3_path: S3文件路径
+        
+    Returns:
+        预签名URL
+    """
+    # 先尝试从缓存获取
+    cached_url = presign_url_cache.get(s3_path)
+    if cached_url:
+        logger.info(f"从缓存获取预签名URL: {s3_path}")
+        return cached_url
+    
+    # 缓存中不存在，生成新的预签名URL
+    logger.info(f"生成新的预签名URL: {s3_path}")
+    url = (
+        await s3_operator.to_async_operator().presign_read(s3_path, expire_second=3600)
     ).url
+    
+    # 将新生成的URL存入缓存
+    presign_url_cache.set(s3_path, url)
+    
+    return url
 
 
 def jieba_cut(text: str) -> List[str]:
     keywords = jieba.analyse.extract_tags(text, topK=5, withWeight=True)
     return list(k for k, _ in keywords)
+
+
+def clear_expired_cache() -> None:
+    """清理过期的预签名URL缓存"""
+    presign_url_cache.clear_expired()
+    logger.info(f"已清理过期缓存，当前缓存数量: {presign_url_cache.size()}")
+
+
+def get_cache_stats() -> dict:
+    """获取缓存统计信息"""
+    return {
+        "cache_size": presign_url_cache.size(),
+        "cache_type": "presign_url_cache",
+        "expire_seconds": 3600
+    }

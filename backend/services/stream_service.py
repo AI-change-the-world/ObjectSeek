@@ -10,6 +10,10 @@ from models.db.stream.stream import Stream
 from models.db.stream.stream_crud import StreamCrud
 
 
+def get_by_id(session: Session, id: int) -> Optional[Stream]:
+    return StreamCrud.get_by_id(session, id)
+
+
 def group(session: Session) -> dict:
     stream_type_counts = (
         session.query(Stream.stream_type, func.count(Stream.id).label("count"))

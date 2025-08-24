@@ -8,8 +8,12 @@ from routers import (
     status_router,
     stream_router,
 )
+from common._background_tasks import start_cache_cleanup
 
 app = FastAPI()
+
+# 启动缓存清理后台任务
+start_cache_cleanup()
 
 app.add_middleware(
     CORSMiddleware,

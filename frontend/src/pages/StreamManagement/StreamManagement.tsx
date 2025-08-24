@@ -1,23 +1,23 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Spin, Tabs, Button, Row, Form, Modal, Input, Upload } from "antd";
+import { Spin, Tabs, Button, Row, Form, Modal, Input, Upload, Select } from "antd";
 import InfiniteScroll from "react-infinite-scroll-component";
-import { fetchCatalog, fetchData, type CatalogProps, type StreamProps } from "./api";
+import { createStream, fetchCatalog, fetchData, uploadFile, type CatalogProps, type StreamProps } from "./api";
 import TabPane from "antd/es/tabs/TabPane";
 import VideoWidget from "./video";
 import { UploadOutlined } from "@ant-design/icons";
 import { toast } from "react-toastify";
 
-
+// 优化的StreamPathInput组件
 const StreamPathInput: React.FC<{
-    value: string;
-    onChange: (v: string) => void;
+    value?: string;
+    onChange?: (v: string) => void;
 }> = React.memo(({ value, onChange }) => {
     return (
         <Input
             value={value}
             placeholder="请输入 RTSP 地址或上传视频文件"
             style={{ flex: 1 }}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => onChange?.(e.target.value)}
         />
     );
 });
@@ -27,7 +27,7 @@ const StreamManagement: React.FC = () => {
     const [data, setData] = useState<StreamProps[]>([]);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
-    const [_, setTotal] = useState(0);
+    const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(false);
     const [tabs, setTabs] = useState<CatalogProps[]>([]);
 
@@ -38,19 +38,30 @@ const StreamManagement: React.FC = () => {
 
     const [uploading, setUploading] = useState(false);
 
+    // 恢复pathVal state，但使用优化的方式
     const [pathVal, setPathVal] = useState("");
+
+    // Form instance for better control
+    const [form] = Form.useForm();
 
     // --- DATA FETCHING LOGIC ---
 
-
-    const handleBeforeUpload = async (file: File) => {
+    // Memoized handlers for better performance
+    const handleBeforeUpload = useCallback(async (file: File) => {
         try {
             setUploading(true);
 
-            setTimeout(() => {
-                setPathVal(file.name);
-                console.log("设置 stream_path 为:", file.name);
-            }, 0);
+            const res = await uploadFile(file);
+
+            if (!res) {
+                toast.error("上传失败");
+                return;
+            }
+
+            // 同时设置pathVal和form的值
+            setPathVal(res);
+            form.setFieldsValue({ stream_path: res });
+            console.log("设置 stream_path 为:", res);
 
             toast.success("上传成功");
         } catch (err) {
@@ -60,7 +71,7 @@ const StreamManagement: React.FC = () => {
         }
 
         return false; // 阻止 antd 自动上传
-    };
+    }, [form]);
 
     useEffect(() => {
         const init = async () => {
@@ -80,21 +91,28 @@ const StreamManagement: React.FC = () => {
         if (loading) return;
         setLoading(true);
 
-        // Fetch data using the provided arguments, not just state. This makes the function more predictable.
-        const res = await fetchData(currentPage, 10, currentTab ?? 0);
+        try {
+            // Fetch data using the provided arguments, not just state. This makes the function more predictable.
+            const res = await fetchData(currentPage, 10, currentTab ?? 0);
 
-        if (res) {
-            // **FIXED**: If it's the first page, we REPLACE the data. Otherwise, we APPEND it.
-            setData((prev) => (currentPage === 1 ? res.records : [...prev, ...res.records]));
-            setTotal(res.total);
+            if (res) {
+                // **FIXED**: If it's the first page, we REPLACE the data. Otherwise, we APPEND it.
+                setData((prev) => (currentPage === 1 ? res.records : [...prev, ...res.records]));
+                setTotal(res.total);
 
-            // **FIXED**: Calculate hasMore based on the total potential data length.
-            const newTotalData = currentPage === 1 ? res.records.length : data.length + res.records.length;
-            setHasMore(newTotalData < res.total);
+                // **FIXED**: Calculate hasMore based on the current data length and total
+                setHasMore(prev => {
+                    const newTotalData = currentPage === 1 ? res.records.length : prev ? 0 : 0; // 重新计算
+                    return res.records.length > 0 && (currentPage * 10) < res.total;
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load data:', error);
+            toast.error('加载数据失败');
+        } finally {
+            setLoading(false);
         }
-
-        setLoading(false);
-    }, [data.length, loading]); // Dependency on data.length helps in hasMore calculation.
+    }, [loading]); // 移除data.length依赖，避免不必要的重新创建
 
     // --- EFFECTS ---
 
@@ -118,22 +136,56 @@ const StreamManagement: React.FC = () => {
 
     // --- HANDLERS ---
 
-    const handleLoadMore = () => {
+    const handleLoadMore = useCallback(() => {
         // This is called by InfiniteScroll. It just needs to increment the page.
         // The useEffect watching `page` will then trigger the data fetch.
         if (!loading) {
             setPage((prev) => prev + 1);
         }
-    };
+    }, [loading]);
 
-
-
-    const handleTabChange = (key: string) => {
+    const handleTabChange = useCallback((key: string) => {
         // Set active tab. The useEffect for filters will handle the rest.
         setActiveTab(Number(key));
-    };
+    }, []);
 
+    const handleModalCancel = useCallback(() => {
+        setModalOpen(false);
+        form.resetFields(); // 重置表单
+        setPathVal(""); // 重置pathVal
+    }, [form]);
 
+    const handleModalOk = useCallback(async () => {
+        try {
+            const values = await form.validateFields();
+            console.log('Form values:', values);
+            // TODO: 这里添加保存逻辑
+            var stream_type;
+            if ((values.stream_path as string).includes("/")) {
+                stream_type = "stream"
+            } else {
+                stream_type = "file"
+            }
+            // TODO 现阶段只有一个算法...
+            const data = { ...values, stream_type: stream_type, algo_id: 1 };
+            const s = await createStream(data);
+            if (s) {
+                toast.success('保存成功');
+            } else {
+                toast.error("保存失败");
+            }
+
+            setModalOpen(false);
+            form.resetFields();
+            setPathVal(""); // 重置pathVal
+        } catch (error) {
+            console.error('Form validation failed:', error);
+        }
+    }, [form]);
+
+    const handleAddVideoClick = useCallback(() => {
+        setModalOpen(true);
+    }, []);
 
     return (
         // **FIXED**: Add an ID to the main scrollable container.
@@ -150,9 +202,7 @@ const StreamManagement: React.FC = () => {
                 <Button
                     type="primary"
                     style={{ marginBottom: 16 }}
-                    onClick={() => {
-                        setModalOpen(true);
-                    }}
+                    onClick={handleAddVideoClick}
                 >
                     新增视频
                 </Button>
@@ -182,61 +232,74 @@ const StreamManagement: React.FC = () => {
                 >
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {data.map((item) => (
-
-                            VideoWidget(item)
+                            <VideoWidget key={item.id} video={item} />
                         ))}
                     </div>
                 </InfiniteScroll>
             </div>
 
             <Modal
-                title={"新增视频"}
+                title="新增视频"
                 open={modalOpen}
-                onOk={() => { }}
-                onCancel={() => {
-                    setModalOpen(false);
-                }}
+                onOk={handleModalOk}
+                onCancel={handleModalCancel}
                 confirmLoading={loading}
                 maskClosable={!loading}
                 closable={!loading}
-
             >
-
-                <Form.Item
-                    name="name"
-                    label="流名称"
-                    rules={[{ required: true, message: "请输入流名称" }]}
+                <Form
+                    form={form}
+                    layout="vertical"
+                    preserve={false}
                 >
-                    <Input />
-                </Form.Item>
+                    <Form.Item
+                        name="name"
+                        label="流名称"
+                        rules={[{ required: true, message: "请输入流名称" }]}
+                    >
+                        <Input placeholder="请输入流名称" />
+                    </Form.Item>
 
-                <Form.Item
-                    name="stream_path"
-                    label="流地址"
-                    rules={[{ required: true, message: "请上传或者输入流地址" }]}
-                >
-                    <Row gutter={8} style={{ display: "flex", marginRight: 1.5 }}>
-                        <StreamPathInput value={pathVal} onChange={(e) => setPathVal(e)} />
+                    <Form.Item
+                        name="stream_path"
+                        label="流地址"
+                        rules={[{ required: true, message: "请上传或者输入流地址" }]}
+                    >
+                        <Row gutter={8} style={{ display: "flex", marginRight: 1.5 }}>
+                            <StreamPathInput value={pathVal} onChange={setPathVal} />
 
-                        {/* 上传按钮 */}
-                        <Upload
-                            style={{ marginLeft: 8 }}
-                            accept="video/*"
-                            showUploadList={false}
-                            beforeUpload={handleBeforeUpload}
-                        >
-                            <Button icon={<UploadOutlined />} loading={uploading} disabled={uploading}>
-                                上传视频
-                            </Button>
-                        </Upload>
-                    </Row>
-                </Form.Item>
+                            {/* 上传按钮 */}
+                            <Upload
+                                style={{ marginLeft: 8 }}
+                                accept="video/*"
+                                showUploadList={false}
+                                beforeUpload={handleBeforeUpload}
+                            >
+                                <Button icon={<UploadOutlined />} loading={uploading} disabled={uploading}>
+                                    上传视频
+                                </Button>
+                            </Upload>
+                        </Row>
+                    </Form.Item>
 
-                <Form.Item name="description" label="描述">
-                    <Input.TextArea rows={3} />
-                </Form.Item>
+                    <Form.Item
+                        name="scenario_id"
+                        label="选择场景"
+                        rules={[{ required: true, message: "请选择场景" }]}
+                    >
+                        <Select placeholder="请选择场景">
+                            {tabs.filter(tab => tab.scenario_id != 0).map((tab) => (
+                                <Select.Option key={tab.scenario_id} value={tab.scenario_id}>
+                                    {tab.scenario_name}
+                                </Select.Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
 
-
+                    <Form.Item name="description" label="描述">
+                        <Input.TextArea rows={3} placeholder="请输入描述信息" />
+                    </Form.Item>
+                </Form>
             </Modal>
         </div >
     );
