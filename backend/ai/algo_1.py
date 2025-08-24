@@ -3,6 +3,7 @@
 
 import threading
 from typing import Tuple
+
 import cv2
 import numpy as np
 import onnxruntime as ort
@@ -10,7 +11,49 @@ import supervision as sv
 from ultralytics import YOLO
 
 from ai._basic import AlgoConfig, AlgoType, BasicAlgo
-from common import numpy_to_base64, logger
+from common import logger, numpy_to_base64
+
+
+def bndbox_overlap(
+    bndbox1: Tuple[float, float, float, float],
+    bndbox2: Tuple[float, float, float, float],
+) -> float:
+    """计算两个边界框的重叠面积比例"""
+    x1, y1, x2, y2 = bndbox1
+    x1_p, y1_p, x2_p, y2_p = bndbox2
+
+    # 先快速排除不可能相交的情况
+    if x2 <= x1_p or x2_p <= x1 or y2 <= y1_p or y2_p <= y1:
+        return 0.0
+
+    # 计算重叠区域
+    overlap_x1 = max(x1, x1_p)
+    overlap_y1 = max(y1, y1_p)
+    overlap_x2 = min(x2, x2_p)
+    overlap_y2 = min(y2, y2_p)
+
+    overlap_area = max(0, overlap_x2 - overlap_x1) * max(0, overlap_y2 - overlap_y1)
+    area1 = (x2 - x1) * (y2 - y1)
+    area2 = (x2_p - x1_p) * (y2_p - y1_p)
+
+    return overlap_area / min(area1, area2)
+
+
+# === 工具方法 ===
+def crop_and_encode(frame, bbox):
+    """裁剪bbox并转为base64"""
+    x1, y1, x2, y2 = map(int, bbox)
+    crop_img = frame[y1:y2, x1:x2]
+    return numpy_to_base64(crop_img)
+
+
+def crop(frame, bbox, id: str = "", save_image: bool = False):
+    """裁剪bbox"""
+    x1, y1, x2, y2 = map(int, bbox)
+    crop_img = frame[y1:y2, x1:x2] if x1 < x2 and y1 < y2 else None
+    if save_image:
+        cv2.imwrite(f"logs/{id}.jpg", crop_img)
+    return crop_img
 
 
 class ReIDModel:
@@ -72,7 +115,6 @@ class ReIDModel:
 
         # 有些 ReID 模型会输出 (1, D)，直接返回即可
         return features.squeeze()
-    
 
 
 class ClassTrackerObject:
@@ -374,7 +416,7 @@ class Algo_1(BasicAlgo):
     def __init__(
         self,
         config: AlgoConfig,
-        video_path: str, # must be a s3 path or rtsp stream, currently only support s3 path
+        video_path: str,  # must be a s3 path or rtsp stream, currently only support s3 path
         reid_model_path: str = "resnet50_market1501_aicity156.onnx",
         yolo_model_path: str = "yolo11n.pt",
     ):
