@@ -54,6 +54,7 @@ def init_db():
     from models.db.algorithm import Algorithm
     from models.db.scenario import Scenario
     from models.db.stream import Stream
+    from models.db.stream.stream_details import StreamDetails
 
     logger.info(f"init db, url: {engine.url}")
     create_database_if_not_exists(settings.database_url)

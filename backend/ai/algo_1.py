@@ -2,7 +2,9 @@
 """
 
 import asyncio
+import os
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Set, Tuple
 
 import cv2
@@ -10,9 +12,12 @@ import numpy as np
 import onnxruntime as ort
 import supervision as sv
 from ultralytics import YOLO
+from ultralytics.utils import LOGGER
 
 from ai._basic import AlgoConfig, AlgoType, BasicAlgo
-from common import logger, numpy_to_base64
+from common import logger, numpy_to_base64, save_s3_temp_file
+
+LOGGER.setLevel(logger.warning)  # 只输出 warning 以上的日志
 
 
 def bndbox_overlap(
@@ -172,9 +177,14 @@ class ClassTrackerObject:
         self.cache_images = []  # 缓存的历史图像
         self.min_image_size = min_image_size  # 最小图像尺寸阈值
 
+        self.bndbox_per_sec = []
+
         # 线程安全控制
         self.lock = threading.Lock()  # 防止并发修改冲突
         self.is_updating = False  # 更新状态标记
+
+    def update_bbox(self, bbox: Tuple[int, int, int, int]):
+        self.bndbox_per_sec.append(bbox)
 
     def update_image(self, image: np.ndarray, reid_model: ReIDModel) -> bool:
         """
@@ -437,17 +447,16 @@ class ToBeMergedCadidate:
 
 def merge_candidates_by_similarity_and_bbox(
     global_info: Dict[str, "ClassTrackerObject"],
+    candidates: set[ToBeMergedCadidate],
     sim_threshold: float = 0.85,
     # max_bbox_move: float = 50.0,  # bbox中心最大移动像素阈值
-) -> Set["ToBeMergedCadidate"]:
+):
     """
     循环遍历 global_info 中的对象，按 start_frame 排序两两比对，
     如果 bbox 移动小于 max_bbox_move 且 embedding 相似度大于 sim_threshold，
     就加入 ToBeMergedCadidate 集合。
     """
     from itertools import combinations
-
-    global candidates_to_merge
 
     objs = list(global_info.values())
     # 按 start_frame 排序
@@ -492,7 +501,7 @@ def merge_candidates_by_similarity_and_bbox(
         tbm.similarity = cos_sim
         tbm.dist = dist
         # 同时满足条件，加入候选集合
-        candidates_to_merge.add(tbm)
+        candidates.add(tbm)
 
 
 def build_time_ordered_chains_with_position_and_similarity(
@@ -619,38 +628,113 @@ def filter_chains_unique_nodes(chains):
 
 
 class Algo_1(BasicAlgo):
+    __algo_name__ = "algo_1"
+
     def __init__(
         self,
-        config: AlgoConfig,
         video_path: str,  # must be a s3 path or rtsp stream, currently only support s3 path
+        config: AlgoConfig = None,
         reid_model_path: str = "resnet50_market1501_aicity156.onnx",
         yolo_model_path: str = "yolo11n.pt",
     ):
         super().__init__()
-        self.config = config
+        self.config = config or AlgoConfig()
         assert self.config.algo_type == AlgoType.video
         self.yolo_model = YOLO(yolo_model_path, verbose=False)
         self.reid_model = ReIDModel(reid_model_path)
-        self.video = cv2.VideoCapture(video_path)
-        fps = self.video.get(cv2.CAP_PROP_FPS)
+        self.temp_file = save_s3_temp_file(video_path)
+
+        self.video = cv2.VideoCapture(self.temp_file)
+        self.fps = self.video.get(cv2.CAP_PROP_FPS)
+        self.video_size = (
+            self.video.get(cv2.CAP_PROP_FRAME_WIDTH),
+            self.video.get(cv2.CAP_PROP_FRAME_HEIGHT),
+        )
 
         self.tracker = sv.ByteTrack(
             track_activation_threshold=0.5,
-            lost_track_buffer=fps * 2,
-            frame_rate=fps,
+            lost_track_buffer=self.fps * 2,
+            frame_rate=self.fps,
         )
         self.box_annotator = sv.BoxAnnotator()
         self.label_annotator = sv.LabelAnnotator()
 
-        
-
-
     async def run(self):
+        global_info = {}
+        executor = ThreadPoolExecutor(max_workers=8)  # 控制并发线程数
+        candidates = set()
         try:
             yield "开始检测..."
             await asyncio.sleep(0.1)
+            frame_id = 0
+            while True:
+                ret, frame = self.video.read()
+                if not ret:
+                    yield "视频检测完成..."
+                    break
+                frame_id += 1
+
+                # 模型推理
+                results = self.yolo_model(frame)[0]
+
+                detections = sv.Detections.from_ultralytics(results)
+                person_class_id = 0
+                mask = detections.class_id == person_class_id
+                detections = detections[mask]
+                detections = self.tracker.update_with_detections(detections)
+                if len(detections) == 0:
+                    continue
+
+                for bbox, tracker_id in zip(detections.xyxy, detections.tracker_id):
+                    if tracker_id not in global_info:
+                        # 新对象
+                        obj = ClassTrackerObject(
+                            tracker_id, start_frame=frame_id, bounding_box=bbox
+                        )
+                        global_info[tracker_id] = obj
+                        # 更新裁剪图像
+                        obj.update_image(
+                            crop(frame, bbox, id=tracker_id), self.reid_model
+                        )
+                    else:
+                        # 已存在对象，更新最后一次 bbox
+                        global_info[tracker_id].update_bounding_box(bbox)
+                        global_info[tracker_id].update_end_frame(frame_id)
+                        if frame_id % self.fps == 0:
+                            # 每隔 frame_rate 帧更新一次图像
+                            executor.submit(
+                                global_info[tracker_id].update_image,
+                                crop(frame, bbox),
+                                self.reid_model,
+                            )
+
+                    if frame_id % self.fps == 0:
+                        global_info[tracker_id].update_bbox(bbox)
+                        # 每隔 frame_rate 帧检查一次
+                        executor.submit(
+                            merge_candidates_by_similarity_and_bbox,
+                            global_info,
+                            candidates,
+                        )
+
         finally:
             self.video.release()
 
+        executor.submit(
+            merge_candidates_by_similarity_and_bbox, global_info, candidates
+        )
+        executor.shutdown(wait=True)
 
+        yield "目标追踪完成，合并相似对象..."
+        await asyncio.sleep(0.1)
 
+        chains = build_time_ordered_chains_with_position_and_similarity(
+            global_info, candidates
+        )
+
+        yield f"总共有 {len(global_info)}个对象，需合并 {len(chains)}个链路。"
+
+        # delete temp files
+        os.remove(self.temp_file)
+
+        # TODO save data to s3 and db

@@ -3,6 +3,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.orm import Session
+from sse_starlette.sse import EventSourceResponse
 
 from common import (ApiPageResponse, ApiResponse, ListResponse,
                     PaginatedRequest, clear_expired_cache, get_cache_stats,
@@ -47,6 +48,17 @@ async def list_by_scenario_handler(
 async def catalog(session: Session = Depends(get_session)) -> ApiResponse:
     """获取数据流目录"""
     return ApiResponse(data=stream_service.catalog(session))
+
+
+@router.get("/analyze/{id}")
+async def analyze(id: int, session: Session = Depends(get_session)):
+    from ai.algo_1 import Algo_1
+
+    obj = stream_service.get_by_id(session, id)
+    if obj is None:
+        return " [DONE] No such stream or file"
+    al = Algo_1(video_path=obj.stream_path)
+    return EventSourceResponse(al.run(), media_type="text/event-stream")
 
 
 @router.get("/view/{id}", response_model=ApiResponse)

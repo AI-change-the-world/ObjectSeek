@@ -90,3 +90,8 @@ def numpy_to_base64(frame: np.ndarray) -> str:
     """
     _, buffer = cv2.imencode(".png", frame)
     return f"data:image/png;base64,{base64.b64encode(buffer).decode('utf-8')}"
+
+
+def save_s3_temp_file(file_path: str) -> str:
+    download_from_s3(file_path, file_path)
+    return file_path
